@@ -1,19 +1,25 @@
 import utils
 import matplotlib.pyplot as plt
 import numpy as np
+from pyquaternion import Quaternion
 
 
 class Ellipsoid:
     
-    def __init__(self, a, b, c, x, mass=None, alpha=None, beta=None, gamma=None, P=None, L=None):
-        self.a = a
-        self.b = b
-        self.c = c
+    def __init__(self, semi_axes, x, mass, euler_angles, P, L, force, torque):
+        self.a = semi_axes.get('a')
+        self.b = semi_axes.get('b')
+        self.c = semi_axes.get('c')
+        
         self.mass = mass
-        self.I_body, self.I_body_inv = utils.generate_inertia_body_matrices(a, b, c, mass)
+        
+        self.I_body = utils.generate_inertia_body_matrix(self.a, self.b, self.c, self.mass)
+        self.I_body_inv = np.linalg.inv(self.I_body)
         
         self.x = x
-        self.q = utils.generate_quaternion_by_angels(alpha, beta, gamma)
+        self.q = utils.generate_quaternion_by_angels(euler_angles.get('alpha'),
+                                                     euler_angles.get('beta'),
+                                                     euler_angles.get('gamma'))
         self.P = P
         self.L = L
         
@@ -21,16 +27,11 @@ class Ellipsoid:
         self.v = None
         self.omega = None
         
-        self.force = None
-        self.torque = None
+        self.force = force
+        self.torque = torque
     
     def body_to_array(self):
-        y = self.x
-        y.extend(self.q)
-        y.extend(self.P)
-        y.extend(self.L)
-        
-        return y
+        return np.concatenate((self.x, self.q, self.P, self.L), axis=None)
     
     def array_to_body(self, y):
         self.x = np.array(y[0:3])
@@ -38,46 +39,43 @@ class Ellipsoid:
         self.P = np.array(y[7:10])
         self.L = np.array(y[10:13])
         
-        R = utils.quaternion_to_matrix(self.q)
+        rotation_matrix = utils.quaternion_to_matrix(self.q)
         
         self.v = np.true_divide(self.P, self.mass)
-        self.I_inv = np.matmul(np.matmul(R, self.I_body_inv), np.transpose(R))
+        self.I_inv = np.matmul(np.matmul(rotation_matrix, self.I_body_inv), np.transpose(rotation_matrix))
         self.omega = np.matmul(self.I_inv, self.L)
         
         self.force = np.array([0, 0, 0])
         self.torque = np.array([0, 0, 0])
     
-    def get_ddt_array(self, y):
-        dydt = []
+    def update_position(self, y, time_step):
+        utils.solver(self, y, time_step)
+        return self.body_to_array()
     
-    def update_position(self, y):
+    def get_dy_dt_array(self, y):
         self.array_to_body(y)
-        #     smth
-        self.body_to_array()
         
-    def ode(self, y):
-        pass
+        omega_as_quat = Quaternion(scalar=0, vector=self.omega)
+        dq_dt = 0.5 * omega_as_quat * self.q
+        dq_dt_v = np.insert(dq_dt.imaginary, 0, dq_dt.scalar)
+        
+        return np.concatenate((self.v, dq_dt_v, self.force, self.torque), axis=None)
     
     def draw(self):
-        fig = plt.figure(figsize=plt.figaspect(1))
+        fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         
         u = np.linspace(0, 2 * np.pi, 100)
         v = np.linspace(0, np.pi, 100)
         
-        x = self.a * np.cos(u) * np.sin(v)
-        y = self.b * np.sin(u) * np.sin(v)
+        print(self.b)
+        x = self.a * np.outer(np.cos(u), np.sin(v))
+        y = self.b * np.outer(np.sin(u), np.sin(v))
+        z = self.c * np.outer(np.ones_like(u), np.cos(v))
         
-        z = self.c * np.ones_like(u) * np.cos(v)
+        ax.plot_surface(x, y, z, rstride=10, cstride=10, color='r')
+        max_radius = max(self.a, self.b, self.c)
+        for axis in 'xyz':
+            getattr(ax, 'set_{}lim'.format(axis))((-max_radius, max_radius))
         
-        R = utils.quaternion_to_matrix(self.q)
-        
-        XYZ = np.transpose(np.array([x, y, z]))
-        x, y, z = np.transpose(np.dot(XYZ, R))
-        ax.plot_surface(x, y, z, rstride=4, cstride=4, color='b')
-        #
-        # max_radius = max(self.a, self.b, self.c)
-        # for axis in 'xyz':
-        #     getattr(ax, 'set_{}lim'.format(axis))((-max_radius, max_radius))
-        #
         plt.show()

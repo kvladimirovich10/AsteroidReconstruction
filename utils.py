@@ -2,14 +2,6 @@ import numpy as np
 from scipy.spatial.transform import Rotation as R
 
 
-def generate_inertia_body_matrices(a, b, c, mass):
-    I_body = generate_inertia_body_matrix(a, b, c, mass)
-    
-    I_body_inv = np.linalg.inv(I_body)
-    
-    return I_body, I_body_inv
-
-
 def generate_inertia_body_matrix(a, b, c, mass):
     I_a = pow(b, 2) + pow(c, 2)
     I_b = pow(c, 2) + pow(a, 2)
@@ -32,7 +24,11 @@ def quaternion_to_matrix(q):
 def matrix_to_matrix(matrix):
     return R.from_matrix(matrix).as_quat()
 
-def ode(body):
-    pass
 
-
+def solver(el, y, time_step):
+    k1 = el.get_dy_dt_array(y)
+    k2 = el.get_dy_dt_array(y + time_step * k1 / 2)
+    k3 = el.get_dy_dt_array(y + time_step * k2 / 2)
+    k4 = el.get_dy_dt_array(y + time_step * k3)
+    
+    return y + time_step * (k1 + 2 * k2 + 2 * k3 + k4) / 6
