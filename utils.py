@@ -13,16 +13,12 @@ def generate_inertia_body_matrix(a, b, c, mass):
 
 def generate_quaternion_by_angels(alpha, beta, gamma):
     r_matrix = R.from_euler('xyz', [alpha, beta, gamma], degrees=True)
-    
+    print(r_matrix.as_quat())
     return r_matrix.as_quat()
 
 
 def quaternion_to_matrix(q):
     return R.from_quat(q, normalized=True).as_matrix()
-
-
-def matrix_to_matrix(matrix):
-    return R.from_matrix(matrix).as_quat()
 
 
 def solver(el, y, time_step):

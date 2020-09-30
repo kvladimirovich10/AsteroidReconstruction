@@ -44,9 +44,6 @@ class Ellipsoid:
         self.v = np.true_divide(self.P, self.mass)
         self.I_inv = np.matmul(np.matmul(rotation_matrix, self.I_body_inv), np.transpose(rotation_matrix))
         self.omega = np.matmul(self.I_inv, self.L)
-        
-        self.force = np.array([0, 0, 0])
-        self.torque = np.array([0, 0, 0])
     
     def update_position(self, y, time_step):
         utils.solver(self, y, time_step)
