@@ -27,7 +27,7 @@ class Ellipsoid:
         self.v = None
         self.omega = np.array([euler_angles.get('alpha'),
                                euler_angles.get('beta'),
-                               euler_angles.get('gamma')])  # for visualization only
+                               euler_angles.get('gamma')])
         
         self.force = force
         self.torque = torque
