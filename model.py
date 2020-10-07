@@ -2,6 +2,8 @@ import utils
 import matplotlib.pyplot as plt
 import numpy as np
 from pyquaternion import Quaternion
+from vpython import *
+import vpython as vp
 
 
 class Ellipsoid:
@@ -67,7 +69,6 @@ class Ellipsoid:
         u = np.linspace(0, 2 * np.pi, 100)
         v = np.linspace(0, np.pi, 100)
         
-        print(self.b)
         x = self.a * np.outer(np.cos(u), np.sin(v))
         y = self.b * np.outer(np.sin(u), np.sin(v))
         z = self.c * np.outer(np.ones_like(u), np.cos(v))
@@ -78,3 +79,79 @@ class Ellipsoid:
             getattr(ax, 'set_{}lim'.format(axis))((-max_radius, max_radius))
         
         plt.show()
+
+    def motion_visualisation(self):
+        s = canvas(title='Rigid selfipsoid free motion',
+                   width=1920, height=1080,
+                   background=color.gray(0.2))
+    
+        y = self.body_to_array()
+    
+        time_step = 0.001
+    
+        self_shape = ellipsoid(pos=utils.vector_from_array(self.x),
+                              axis=vector(1, 0, 0),
+                              length=self.a, height=self.b, width=self.c,
+                              texture=vp.textures.rough)
+    
+        initial_pos = vector(0, 0, 0)
+    
+        arrow(pos=initial_pos, axis=vector(3, 0, 0), shaftwidth=0.01, color=vector(255, 0, 0))
+        arrow(pos=initial_pos, axis=vector(0, 3, 0), shaftwidth=0.01, color=vector(0, 255, 0))
+        arrow(pos=initial_pos, axis=vector(0, 0, 3), shaftwidth=0.01, color=vector(0, 0, 255))
+    
+        x_v_b = arrow(pos=initial_pos, axis=vector(3, 0, 0), shaftwidth=0.01, color=vector(255, 0, 0))
+        y_v_b = arrow(pos=initial_pos, axis=vector(0, 3, 0), shaftwidth=0.01, color=vector(0, 255, 0))
+        z_v_b = arrow(pos=initial_pos, axis=vector(0, 0, 3), shaftwidth=0.01, color=vector(0, 0, 255))
+    
+        v_v = arrow(pos=initial_pos, axis=initial_pos, shaftwidth=0.05, color=vector(255, 220, 0))
+        omega_v = arrow(pos=initial_pos, axis=initial_pos, shaftwidth=0.05, color=vector(255, 0, 255))
+    
+        r = arrow(pos=initial_pos, axis=vector(0, self.b / 2, 0), shaftwidth=0.01,
+                  color=vector(255, 255, 255))
+    
+        r_p = arrow(pos=self_shape.pos, axis=vector(0, self.b / 2, 0), shaftwidth=0.01,
+                    color=vector(255, 255, 255))
+    
+        v_c = arrow(pos=self_shape.pos, axis=vector(0, self.b / 2, 0), shaftwidth=0.01,
+                    color=vector(255, 255, 255))
+    
+        utils.rotate(self_shape, self)
+        utils.rotate(x_v_b, self)
+        utils.rotate(y_v_b, self)
+        utils.rotate(z_v_b, self)
+    
+        const = 5
+        while True:
+            y = self.update_position(y, time_step)
+        
+            utils.translate(self_shape, self)
+            utils.translate(x_v_b, self)
+            utils.translate(y_v_b, self)
+            utils.translate(z_v_b, self)
+            utils.translate(v_v, self)
+            utils.translate(omega_v, self)
+            utils.translate(r, self)
+        
+            v_v.axis = const * utils.vector_from_array(self.v).norm()
+            omega_v.axis = const * utils.vector_from_array(self.omega).norm()
+        
+            utils.rotate(self_shape, self)
+            utils.rotate(x_v_b, self)
+            utils.rotate(y_v_b, self)
+            utils.rotate(z_v_b, self)
+            utils.rotate(r, self)
+        
+            # для отрисовки вектора общей скорости точки на поверхности
+            r_projection = (np.dot(utils.array_from_vector(omega_v.axis), utils.array_from_vector(r.axis)) / pow(
+                np.linalg.norm(utils.array_from_vector(omega_v.axis)), 2)) * omega_v.axis
+        
+            r_p_axis = r.axis - r_projection
+        
+            r_p.pos = r_projection + self_shape.pos
+            r_p.axis = r_p_axis
+        
+            v_c.axis = utils.vector_from_array(np.cross(self.omega, utils.array_from_vector(r_p.axis)) + self.v).norm()
+            v_c.pos = self_shape.pos + r.axis
+        
+            s.center = utils.vector_from_array(self_shape.pos.value)
