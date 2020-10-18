@@ -1,6 +1,8 @@
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 from vpython import *
+from math import *
+from numpy import *
 
 
 def generate_inertia_body_matrix(a, b, c, mass):
@@ -14,7 +16,6 @@ def generate_inertia_body_matrix(a, b, c, mass):
 
 def generate_quaternion_by_angels(alpha, beta, gamma):
     r_matrix = R.from_euler('xyz', [alpha, beta, gamma], degrees=True)
-    print(r_matrix.as_quat())
     return r_matrix.as_quat()
 
 
@@ -47,3 +48,40 @@ def rotate(body, ell):
 
 def translate(body, ell):
     body.pos = body.pos + vector(ell.v[0], ell.v[1], ell.v[2])
+
+
+def R_from_2vec(vector_orig, vector_fin):
+    R = np.zeros((3, 3))
+    
+    vector_orig = vector_orig / np.linalg.norm(vector_orig)
+    vector_fin = vector_fin / np.linalg.norm(vector_fin)
+    
+    axis = cross(vector_orig, vector_fin)
+    axis_len = np.linalg.norm(axis)
+    
+    try:
+        axis = axis / axis_len
+        
+        x = axis[0]
+        y = axis[1]
+        z = axis[2]
+        
+        angle = acos(np.dot(vector_orig, vector_fin))
+        
+        ca = cos(angle)
+        sa = sin(angle)
+        
+        R[0][0] = 1.0 + (1.0 - ca) * (pow(x, 2) - 1.0)
+        R[0][1] = -z * sa + (1.0 - ca) * x * y
+        R[0][2] = y * sa + (1.0 - ca) * x * z
+        R[1][0] = z * sa + (1.0 - ca) * x * y
+        R[1][1] = 1.0 + (1.0 - ca) * (pow(y, 2) - 1.0)
+        R[1][2] = -x * sa + (1.0 - ca) * y * z
+        R[2][0] = -y * sa + (1.0 - ca) * x * z
+        R[2][1] = x * sa + (1.0 - ca) * y * z
+        R[2][2] = 1.0 + (1.0 - ca) * (pow(z, 2) - 1.0)
+        
+        return R
+    
+    except:
+        print('axis_len = 0')

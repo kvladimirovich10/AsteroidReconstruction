@@ -1,12 +1,15 @@
 from __future__ import division, print_function
 import numpy as np
 from model import Ellipsoid
+import math
+import matplotlib.pyplot as plt
+from util import measurer
 
 
-def main():
-    mass = 1000
+def init_ell():
+    mass = 100
     x = np.array([0, 0, 0])
-    semi_axes = {'a': 2.5, 'b': 1.5, 'c': 1.3}
+    semi_axes = {'a': 2, 'b': 1.5, 'c': 1.3}
     euler_angles = {'alpha': 0, 'beta': 0, 'gamma': 0}
     
     P = np.array([1, 1, 1])
@@ -15,9 +18,57 @@ def main():
     force = np.array([0, 0, 0])
     torque = np.array([0, 0, 0])
     
-    ell = Ellipsoid(semi_axes, x, mass, euler_angles, P, L, force, torque)
+    return Ellipsoid(semi_axes, x, mass, euler_angles, P, L, force, torque)
+
+
+def get_dist(self, point):
+    return math.sqrt(pow((point[0] - self.x[0]) * self.b * self.c, 2) + \
+                     pow((point[1] - self.x[1]) * self.a * self.c, 2) + \
+                     pow((point[2] - self.x[2]) * self.a * self.b, 2)) - \
+           self.a * self.b * self.c
+
+
+def get_point_in_ell_system(self, point):
+    return np.matmul(self.rotation_matrix, point)
+
+
+def test_show(ell):
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d', proj_type='ortho')
     
-    ell.motion_visualisation()
+    n = 10
+    for i in range(n):
+        point = [4, -n / 2 + i, 0]
+        distance, point_projection = measurer.get_closest_dist(ell, point)
+        print(distance)
+        ax.scatter(point[0], point[1], point[2], s=2, marker='*')
+        ax.scatter(point_projection[0], point_projection[1], point_projection[2], s=2, marker='o')
+
+        point = [-n / 2 + i, 4, 0]
+        distance, point_projection = measurer.get_closest_dist(ell, point)
+        print(distance)
+        ax.scatter(point[0], point[1], point[2], s=2, marker='*')
+        ax.scatter(point_projection[0], point_projection[1], point_projection[2], s=2, marker='o')
+
+        point = [0, 4, -n / 2 + i]
+        distance, point_projection = measurer.get_closest_dist(ell, point)
+        print(distance)
+        ax.scatter(point[0], point[1], point[2], s=2, marker='*')
+        ax.scatter(point_projection[0], point_projection[1], point_projection[2], s=2, marker='o')
+    
+    ax.view_init(elev=90, azim=-90)
+    ax.axis('auto')
+    plt.show()
+
+
+def main():
+    ell = init_ell()
+    
+    test_show(ell)
+    
+    # rate = 25
+    # time_step = 1/rate
+    # ell.motion_visualisation(time_step, rate)
 
 
 main()
