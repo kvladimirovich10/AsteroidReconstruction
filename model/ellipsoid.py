@@ -1,4 +1,4 @@
-from util import utils
+import util.utilMethods as utils
 import matplotlib.pyplot as plt
 import numpy as np
 from pyquaternion import Quaternion
@@ -8,7 +8,7 @@ import vpython as vp
 
 class Ellipsoid:
     
-    def __init__(self, semi_axes, x, mass, euler_angles, P, L, force, torque):
+    def __init__(self, semi_axes: dict, x, mass, euler_angles: dict, P, L, force, torque):
         self.a = semi_axes.get('a')
         self.b = semi_axes.get('b')
         self.c = semi_axes.get('c')
@@ -71,9 +71,9 @@ class Ellipsoid:
         u = np.linspace(0, 2 * np.pi, 100)
         v = np.linspace(0, np.pi, 100)
         
-        x = self.a * np.outer(np.cos(u), np.sin(v))
-        y = self.b * np.outer(np.sin(u), np.sin(v))
-        z = self.c * np.outer(np.ones_like(u), np.cos(v))
+        x = self.x[0] + self.a * np.outer(np.cos(u), np.sin(v))
+        y = self.x[1] + self.b * np.outer(np.sin(u), np.sin(v))
+        z = self.x[2] + self.c * np.outer(np.ones_like(u), np.cos(v))
         
         ax.plot_surface(x, y, z, rstride=10, cstride=10, color='r')
         max_radius = max(self.a, self.b, self.c)
@@ -89,9 +89,10 @@ class Ellipsoid:
         
         y = self.body_to_array()
         
-        ell_shape = ellipsoid(pos=utils.vector_from_array(self.x),
+        ell_shape = ellipsoid(pos=utils
+                              .vector_from_array(self.x),
                               axis=vector(1, 0, 0),
-                              length=2*self.a, height=2*self.b, width=2*self.c,
+                              length=2 * self.a, height=2 * self.b, width=2 * self.c,
                               texture=vp.textures.rough)
         
         initial_pos = vector(0, 0, 0)
@@ -144,15 +145,19 @@ class Ellipsoid:
             utils.rotate(r, self)
             
             # для отрисовки вектора общей скорости точки на поверхности
-            r_projection = (np.dot(utils.array_from_vector(omega_v.axis), utils.array_from_vector(r.axis)) / pow(
-                np.linalg.norm(utils.array_from_vector(omega_v.axis)), 2)) * omega_v.axis
+            r_projection = (np.dot(utils
+                                   .array_from_vector(omega_v.axis), utils
+                                   .array_from_vector(r.axis)) / pow(
+                np.linalg.norm(utils
+                               .array_from_vector(omega_v.axis)), 2)) * omega_v.axis
             
             r_p_axis = r.axis - r_projection
             
             r_p.pos = r_projection + ell_shape.pos
             r_p.axis = r_p_axis
             
-            v_c.axis = utils.vector_from_array(np.cross(self.omega, utils.array_from_vector(r_p.axis)) + self.v).norm()
+            v_c.axis = utils.vector_from_array(np.cross(self.omega, utils
+                                                        .array_from_vector(r_p.axis)) + self.v).norm()
             v_c.pos = ell_shape.pos + r.axis
             
             s.center = utils.vector_from_array(ell_shape.pos.value)
@@ -165,9 +170,10 @@ class Ellipsoid:
         initial_pos = np.array([0, 0, 0])
         v_initial_pos = utils.vector_from_array(initial_pos)
         
-        ellipsoid(pos=utils.vector_from_array(self.x),
+        ellipsoid(pos=utils
+                  .vector_from_array(self.x),
                   axis=vector(1, 0, 0),
-                  length=2*self.a, height=2*self.b, width=2*self.c,
+                  length=2 * self.a, height=2 * self.b, width=2 * self.c,
                   texture=vp.textures.rough)
         
         arrow(pos=v_initial_pos, axis=vector(3, 0, 0), shaftwidth=0.01, color=vector(255, 0, 0))
@@ -176,15 +182,15 @@ class Ellipsoid:
         
         points(pos=[v_initial_pos], radius=5, color=color.white)
         
-        arrow(pos=v_initial_pos, axis=utils.vector_from_array(self.x).norm(), shaftwidth=0.01,
+        arrow(pos=v_initial_pos, axis=utils
+              .vector_from_array(self.x).norm(), shaftwidth=0.01,
               color=vector(255, 255, 255))
         
         rotated_point = self.get_point_in_ell_system(initial_pos)
         print(rotated_point)
         
-        dist = self.get_dist(rotated_point)
+        dist = utils.get_dist(self, rotated_point)
         print(dist)
-    
     
     def get_point_in_ell_system(self, point):
         return np.matmul(self.rotation_matrix, point)

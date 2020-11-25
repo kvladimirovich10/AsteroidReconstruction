@@ -1,6 +1,5 @@
-from __future__ import division, print_function
 import numpy as np
-from model import Ellipsoid
+from model.ellipsoid import Ellipsoid
 import math
 import matplotlib.pyplot as plt
 from util import measurer
@@ -21,37 +20,37 @@ def init_ell():
     return Ellipsoid(semi_axes, x, mass, euler_angles, P, L, force, torque)
 
 
-def get_dist(self, point):
-    return math.sqrt(pow((point[0] - self.x[0]) * self.b * self.c, 2) + \
-                     pow((point[1] - self.x[1]) * self.a * self.c, 2) + \
-                     pow((point[2] - self.x[2]) * self.a * self.b, 2)) - \
-           self.a * self.b * self.c
+def get_dist(ell, point):
+    return math.sqrt(pow((point[0] - ell.x[0]) * ell.b * ell.c, 2) + \
+                     pow((point[1] - ell.x[1]) * ell.a * ell.c, 2) + \
+                     pow((point[2] - ell.x[2]) * ell.a * ell.b, 2)) - \
+           ell.a * ell.b * ell.c
 
 
 def get_point_in_ell_system(self, point):
     return np.matmul(self.rotation_matrix, point)
 
 
-def test_show(ell):
+def visualisation_test(ell):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d', proj_type='ortho')
     
     n = 10
     for i in range(n):
         point = [4, -n / 2 + i, 0]
-        distance, point_projection = measurer.get_closest_dist(ell, point)
+        distance, point_projection = measurer._get_closest_dist(ell, point)
         print(distance)
         ax.scatter(point[0], point[1], point[2], s=2, marker='*')
         ax.scatter(point_projection[0], point_projection[1], point_projection[2], s=2, marker='o')
 
         point = [-n / 2 + i, 4, 0]
-        distance, point_projection = measurer.get_closest_dist(ell, point)
+        distance, point_projection = measurer._get_closest_dist(ell, point)
         print(distance)
         ax.scatter(point[0], point[1], point[2], s=2, marker='*')
         ax.scatter(point_projection[0], point_projection[1], point_projection[2], s=2, marker='o')
 
         point = [0, 4, -n / 2 + i]
-        distance, point_projection = measurer.get_closest_dist(ell, point)
+        distance, point_projection = measurer._get_closest_dist(ell, point)
         print(distance)
         ax.scatter(point[0], point[1], point[2], s=2, marker='*')
         ax.scatter(point_projection[0], point_projection[1], point_projection[2], s=2, marker='o')
@@ -62,9 +61,9 @@ def test_show(ell):
 
 
 def main():
-    ell = init_ell()
+    ellipsoid = init_ell()
     
-    test_show(ell)
+    visualisation_test(ellipsoid)
     
     # rate = 25
     # time_step = 1/rate

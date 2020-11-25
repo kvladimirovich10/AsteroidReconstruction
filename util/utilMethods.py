@@ -1,8 +1,7 @@
-import numpy as np
 from scipy.spatial.transform import Rotation as R
 from vpython import *
-from math import *
-from numpy import *
+import math as m
+import numpy as np
 
 
 def generate_inertia_body_matrix(a, b, c, mass):
@@ -56,7 +55,7 @@ def R_from_2vec(vector_orig, vector_fin):
     vector_orig = vector_orig / np.linalg.norm(vector_orig)
     vector_fin = vector_fin / np.linalg.norm(vector_fin)
     
-    axis = cross(vector_orig, vector_fin)
+    axis = np.cross(vector_orig, vector_fin)
     axis_len = np.linalg.norm(axis)
     
     try:
@@ -85,3 +84,10 @@ def R_from_2vec(vector_orig, vector_fin):
     
     except:
         print('axis_len = 0')
+
+
+def get_dist(ell, point):
+    return m.sqrt(pow((point[0] - ell.x[0]) * ell.b * ell.c, 2) + \
+                     pow((point[1] - ell.x[1]) * ell.a * ell.c, 2) + \
+                     pow((point[2] - ell.x[2]) * ell.a * ell.b, 2)) - \
+           ell.a * ell.b * ell.c
