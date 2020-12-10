@@ -12,7 +12,7 @@ def init_ell():
     euler_angles = {'alpha': 0, 'beta': 0, 'gamma': 0}
     
     P = np.array([1, 1, 1])
-    L = np.array([2.5, -3, 1])
+    L = np.array([0, 0, 0])
     
     force = np.array([0, 0, 0])
     torque = np.array([0, 0, 0])
@@ -63,11 +63,11 @@ def visualisation_test(ell):
 def main():
     ellipsoid = init_ell()
     
-    visualisation_test(ellipsoid)
+    # visualisation_test(ellipsoid)
     
-    # rate = 25
-    # time_step = 1/rate
-    # ell.motion_visualisation(time_step, rate)
+    rate = 25
+    time_step = 1/rate
+    ellipsoid.motion_visualisation(time_step, rate)
 
 
 main()

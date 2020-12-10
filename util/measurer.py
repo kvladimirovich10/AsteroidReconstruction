@@ -249,6 +249,6 @@ def get_closest_dist_rotated(ell, point, eps=0.0001):
         x_old = x_new
         k += 1
     
-    point_projection = _get_xyz_from_polar(ell, *x_new)
+    nonrotated_point_projection = _get_xyz_from_polar(ell, *x_new)
     
-    return lg.norm(point_in_ell_system - point_projection), np.matmul(ell.rotation_matrix, point_projection) + ell.x
+    return lg.norm(point_in_ell_system - nonrotated_point_projection), nonrotated_point_projection

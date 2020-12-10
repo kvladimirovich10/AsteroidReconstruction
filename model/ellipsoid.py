@@ -1,6 +1,7 @@
 import util.utilMethods as utils
 import matplotlib.pyplot as plt
 import numpy as np
+import numpy.linalg as lg
 from pyquaternion import Quaternion
 from vpython import *
 import vpython as vp
@@ -39,6 +40,29 @@ class Ellipsoid:
     def body_to_array(self):
         return np.concatenate((self.x, self.q, self.P, self.L), axis=None)
     
+    def get_normal_vector_in_point(self, point):
+        normal = np.array([2 * (point[0]) / pow(self.a, 2),
+                           2 * (point[1]) / pow(self.b, 2),
+                           2 * (point[2]) / pow(self.c, 2)])
+        
+        rotated_normal = np.matmul(self.rotation_matrix, normal)
+        
+        return rotated_normal / np.linalg.norm(rotated_normal)
+    
+    def get_full_velocity_in_point(self, point):
+        v_linear = self.v
+        omega = np.array(self.omega)
+        r = point - self.x
+        
+        v_angular = np.zeros(3)
+        
+        if np.count_nonzero(omega) > 0:
+            r_proj_on_omega = omega * np.dot(omega, r) / pow(lg.norm(omega), 2)
+            r_perp = r - r_proj_on_omega
+            v_angular = np.cross(omega, r_perp)
+        
+        return v_angular + v_linear
+    
     def array_to_body(self, y):
         self.x = np.array(y[0:3])
         self.q = np.array(y[3:7])
@@ -63,24 +87,6 @@ class Ellipsoid:
         dq_dt_v = np.insert(dq_dt.imaginary, 0, dq_dt.scalar)
         
         return np.concatenate((self.v, dq_dt_v, self.force, self.torque), axis=None)
-    
-    def draw(self):
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-        
-        u = np.linspace(0, 2 * np.pi, 100)
-        v = np.linspace(0, np.pi, 100)
-        
-        x = self.x[0] + self.a * np.outer(np.cos(u), np.sin(v))
-        y = self.x[1] + self.b * np.outer(np.sin(u), np.sin(v))
-        z = self.x[2] + self.c * np.outer(np.ones_like(u), np.cos(v))
-        
-        ax.plot_surface(x, y, z, rstride=10, cstride=10, color='r')
-        max_radius = max(self.a, self.b, self.c)
-        for axis in 'xyz':
-            getattr(ax, 'set_{}lim'.format(axis))((-max_radius, max_radius))
-        
-        plt.show()
     
     def motion_visualisation(self, time_step, frame_rate):
         s = canvas(title='Rigid ellipsoid free motion',
@@ -117,7 +123,7 @@ class Ellipsoid:
         v_c = arrow(pos=ell_shape.pos, axis=vector(0, self.b / 2, 0), shaftwidth=0.01,
                     color=vector(255, 255, 255))
         
-        utils.rotate(ell_shape, self)
+        # utils.rotate(ell_shape, self)
         utils.rotate(x_v_b, self)
         utils.rotate(y_v_b, self)
         utils.rotate(z_v_b, self)
@@ -126,8 +132,7 @@ class Ellipsoid:
         while True:
             rate(frame_rate)
             y = self.update_position(y, time_step)
-            
-            utils.translate(ell_shape, self)
+            # utils.translate(ell_shape, self)
             utils.translate(x_v_b, self)
             utils.translate(y_v_b, self)
             utils.translate(z_v_b, self)
@@ -145,11 +150,8 @@ class Ellipsoid:
             utils.rotate(r, self)
             
             # для отрисовки вектора общей скорости точки на поверхности
-            r_projection = (np.dot(utils
-                                   .array_from_vector(omega_v.axis), utils
-                                   .array_from_vector(r.axis)) / pow(
-                np.linalg.norm(utils
-                               .array_from_vector(omega_v.axis)), 2)) * omega_v.axis
+            r_projection = (np.dot(utils.array_from_vector(omega_v.axis), utils.array_from_vector(r.axis)) /
+                            pow(np.linalg.norm(utils.array_from_vector(omega_v.axis)), 2)) * omega_v.axis
             
             r_p_axis = r.axis - r_projection
             

@@ -2,6 +2,31 @@ from scipy.spatial.transform import Rotation as R
 from vpython import *
 import math as m
 import numpy as np
+import plotly.graph_objects as pgo
+
+
+def centroid(vertexes):
+    _x_list = [v[0] for v in vertexes]
+    _y_list = [v[1] for v in vertexes]
+    _z_list = [v[2] for v in vertexes]
+    _len = len(vertexes)
+    _x = sum(_x_list) / _len
+    _y = sum(_y_list) / _len
+    _z = sum(_z_list) / _len
+    return [_x, _y, _z]
+
+
+def get_arrow_cone(point, direction):
+    return pgo.Cone(
+        x=[point[0]],
+        y=[point[1]],
+        z=[point[2]],
+        u=[direction[0]],
+        v=[direction[1]],
+        w=[direction[2]],
+        sizeref=0.4,
+        sizemode="absolute",
+        anchor="tail")
 
 
 def generate_inertia_body_matrix(a, b, c, mass):
@@ -88,6 +113,6 @@ def R_from_2vec(vector_orig, vector_fin):
 
 def get_dist(ell, point):
     return m.sqrt(pow((point[0] - ell.x[0]) * ell.b * ell.c, 2) + \
-                     pow((point[1] - ell.x[1]) * ell.a * ell.c, 2) + \
-                     pow((point[2] - ell.x[2]) * ell.a * ell.b, 2)) - \
+                  pow((point[1] - ell.x[1]) * ell.a * ell.c, 2) + \
+                  pow((point[2] - ell.x[2]) * ell.a * ell.b, 2)) - \
            ell.a * ell.b * ell.c
