@@ -1,18 +1,22 @@
+import sys
+
 import numpy as np
 from model.ellipsoid import Ellipsoid
 import math
 import matplotlib.pyplot as plt
 from util import measurer
+from util import RayMarching as rm
 
 
 def init_ell():
-    mass = 100
-    x = np.array([0, 0, 0])
-    semi_axes = {'a': 2, 'b': 1.5, 'c': 1.3}
+    mass = 1000
+    x = np.array([10000, 0, 0])
+    semi_axes = {'a': 1, 'b': 2, 'c': 1.3}
     euler_angles = {'alpha': 0, 'beta': 0, 'gamma': 0}
     
-    P = np.array([1, 1, 1])
-    L = np.array([0, 0, 0])
+    P = np.array([0, 0, 0])
+    L = np.array([-5, 3, 10])
+    # L = np.array([0, 0, 0])
     
     force = np.array([0, 0, 0])
     torque = np.array([0, 0, 0])
@@ -31,43 +35,30 @@ def get_point_in_ell_system(self, point):
     return np.matmul(self.rotation_matrix, point)
 
 
-def visualisation_test(ell):
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d', proj_type='ortho')
-    
-    n = 10
-    for i in range(n):
-        point = [4, -n / 2 + i, 0]
-        distance, point_projection = measurer._get_closest_dist(ell, point)
-        print(distance)
-        ax.scatter(point[0], point[1], point[2], s=2, marker='*')
-        ax.scatter(point_projection[0], point_projection[1], point_projection[2], s=2, marker='o')
-
-        point = [-n / 2 + i, 4, 0]
-        distance, point_projection = measurer._get_closest_dist(ell, point)
-        print(distance)
-        ax.scatter(point[0], point[1], point[2], s=2, marker='*')
-        ax.scatter(point_projection[0], point_projection[1], point_projection[2], s=2, marker='o')
-
-        point = [0, 4, -n / 2 + i]
-        distance, point_projection = measurer._get_closest_dist(ell, point)
-        print(distance)
-        ax.scatter(point[0], point[1], point[2], s=2, marker='*')
-        ax.scatter(point_projection[0], point_projection[1], point_projection[2], s=2, marker='o')
-    
-    ax.view_init(elev=90, azim=-90)
-    ax.axis('auto')
-    plt.show()
-
-
 def main():
     ellipsoid = init_ell()
     
-    # visualisation_test(ellipsoid)
+    seconds = 80
+    rate = 50
+    time_step = 1 / rate
     
-    rate = 25
-    time_step = 1/rate
-    ellipsoid.motion_visualisation(time_step, rate)
+    print('\nMOTION MODELING PART')
+    y = ellipsoid.body_to_array()
+    
+    for i in range(seconds * rate):
+        sys.stdout.write(f'\r{i}/{seconds * rate}')
+        sys.stdout.flush()
+        y = ellipsoid.update_position(y, time_step)
+    
+    print('\nRAY MARCHING PART')
+    observation_point = [0, 0, 0]
+    grid_side_point_number = 50
+    rm.ellipsoid_ray_marching(ellipsoid, observation_point, grid_side_point_number,
+                              make_ray_marching_image=False, make_radio_image=True)
+
+    # rate = 25
+    # time_step = 1/rate
+    # ellipsoid.motion_visualisation(time_step, rate)
 
 
 main()

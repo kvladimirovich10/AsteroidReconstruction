@@ -5,6 +5,10 @@ import numpy as np
 import plotly.graph_objects as pgo
 
 
+def poly_area(x, y):
+    return 0.5 * np.abs(np.dot(x, np.roll(y, 1)) - np.dot(y, np.roll(x, 1)))
+
+
 def centroid(vertexes):
     _x_list = [v[0] for v in vertexes]
     _y_list = [v[1] for v in vertexes]
@@ -24,8 +28,10 @@ def get_arrow_cone(point, direction):
         u=[direction[0]],
         v=[direction[1]],
         w=[direction[2]],
-        sizeref=0.4,
-        sizemode="absolute",
+        showlegend=False,
+        sizemode="scaled",
+        sizeref=0.05,
+        colorscale=[[0, 'rgb(0,0,255)'], [1, 'rgb(0,0,255)']],
         anchor="tail")
 
 
@@ -84,7 +90,7 @@ def R_from_2vec(vector_orig, vector_fin):
     axis_len = np.linalg.norm(axis)
     
     try:
-        axis = axis / axis_len
+        # axis = axis / axis_len
         
         x = axis[0]
         y = axis[1]

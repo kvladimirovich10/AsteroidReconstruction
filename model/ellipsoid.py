@@ -1,5 +1,4 @@
 import util.utilMethods as utils
-import matplotlib.pyplot as plt
 import numpy as np
 import numpy.linalg as lg
 from pyquaternion import Quaternion
@@ -123,7 +122,7 @@ class Ellipsoid:
         v_c = arrow(pos=ell_shape.pos, axis=vector(0, self.b / 2, 0), shaftwidth=0.01,
                     color=vector(255, 255, 255))
         
-        # utils.rotate(ell_shape, self)
+        utils.rotate(ell_shape, self)
         utils.rotate(x_v_b, self)
         utils.rotate(y_v_b, self)
         utils.rotate(z_v_b, self)
@@ -132,7 +131,7 @@ class Ellipsoid:
         while True:
             rate(frame_rate)
             y = self.update_position(y, time_step)
-            # utils.translate(ell_shape, self)
+            utils.translate(ell_shape, self)
             utils.translate(x_v_b, self)
             utils.translate(y_v_b, self)
             utils.translate(z_v_b, self)
