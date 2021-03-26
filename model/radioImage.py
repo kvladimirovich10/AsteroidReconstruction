@@ -1,5 +1,6 @@
 from plotly.graph_objs import Layout
 
+from model.ellipsoid import Ellipsoid
 from model.ray import Ray
 import numpy.linalg as lg
 import plotly.graph_objects as pgo
@@ -22,36 +23,47 @@ from shapely.geometry.polygon import Polygon
 
 
 class RadioImage:
-    def __init__(self):
+    def __init__(self, ell: Ellipsoid):
+        self.ell = ell
         self.rays = []
         self.distances = []
         self.velocities = []
         self.colors = []
     
-    def build_image(self):
+    def add_ray(self, ray: Ray):
+        self.rays.append(ray)
+        self.distances.append(ray.distance_to_point)
+        self.velocities.append(ray.velocity_sign_direction * lg.norm(ray.velocity_projection))
+        self.colors.append(ray.color)
+    
+    def build_image(self, name, x_lim, y_lim):
+        self.build_image_interp(name, x_lim, y_lim)
+        
+        # self.build_image_points()
+    
+    def build_image_interp(self, name, x_lim, y_lim):
         x = np.array(self.velocities)
         y = np.array(self.distances)
         z = np.array(self.colors)
+        z = z / z.max()
         
         points = np.column_stack((x, y))
-        triangulation = trim.Triangulation(x, y)  # Delaunay(points)
+        triangulation = trim.Triangulation(x, y)
         
         edges = set()
         edge_points = []
         
         alpha_nose = 10
-        alpha_side = 0.000000001
+        alpha_side = 0.0000001
         
         delta_y = y.max() - y.min()
-        x_min = -0.02
-        x_max = 2.3
+        x_min = -0.5
+        x_max = 0.35
         y_min = y.min()
-        y_max = y.min() + 3 * delta_y / 4
+        y_max = y.min() + delta_y / 5
         
         def add_edge(i, j):
-            """Add a line between the i-th and j-th points, if not in the list already"""
             if (i, j) in edges or (j, i) in edges:
-                # already added
                 return
             edges.add((i, j))
             edge_points.append(points[[i, j]])
@@ -118,8 +130,8 @@ class RadioImage:
         triangles = list(polygonize(m))
         
         boundaries = cascaded_union(triangles).boundary
-        x_alpha = boundaries.xy[0]
-        y_alpha = boundaries.xy[1]
+        # x_alpha = boundaries.xy[0]
+        # y_alpha = boundaries.xy[1]
         
         out_of_alpha = []
         inside_alpha = []
@@ -138,189 +150,64 @@ class RadioImage:
         inside_alpha = np.array(inside_alpha).T
         
         valid_triangulation = trim.Triangulation(x, y, valid_tri)
-        
+
         fig, ax = plt.subplots()
-        ax.set_facecolor((0, 0, 0))
-        
+        ax.set(xlim=x_lim, ylim=y_lim)
+        ax.ticklabel_format(useOffset=False)
+        plt.axis('off')
+        plt.gca().set_aspect('equal')
+        fig.patch.set_facecolor('black')
+
         # plt.gca().add_patch(PolygonPatch(cascaded_union(triangles), alpha=0.5))
         # plt.scatter(x_alpha, y_alpha, marker="*", s=20)
         
-        plt.scatter(out_of_alpha[0], out_of_alpha[1], marker="*", s=20, c='blue')
+        # plt.scatter(out_of_alpha[0], out_of_alpha[1], marker="*", s=20, c='blue')
         
-        xi, yi = np.meshgrid(np.linspace(x.min(), x.max(), 500), np.linspace(y.min(), y.max(), 500))
-        interp_cubic_geom = trim.CubicTriInterpolator(valid_triangulation, z, kind='geom')
-        zi_cubic_geom = interp_cubic_geom(xi, yi)
-        cs = ax.contourf(xi, yi, zi_cubic_geom, 200, cmap="Greys", vmin=0, vmax=80)
-        fig.colorbar(cs, ax=ax)
+        # xi, yi = np.meshgrid(np.linspace(x.min(), x.max(), 1000), np.linspace(y.min(), y.max(), 1000))
+        # interp_cubic_geom = trim.CubicTriInterpolator(valid_triangulation, z, kind='geom')
+        # zi_cubic_geom = interp_cubic_geom(xi, yi)
+        # cs = ax.contourf(xi, yi, zi_cubic_geom, 300, cmap="Greys", vmin=0, vmax=80)
+        # fig.colorbar(cs, ax=ax)
         
-        # plt.tricontourf(valid_triangulation, z, 50, cmap="Greys", vmin=0, vmax=90)
+        color_map = plt.cm.get_cmap('Greys')
+        plt.tricontourf(valid_triangulation, z, 400, cmap=color_map, vmin=0, vmax=z.max())
+        # plt.scatter(0, np.linalg.norm(self.ell.x), marker="o", s=10, c='red')
+
+        # plt.scatter(x, y, marker="o", s=10, c='red')
+        # plt.vlines(x_min, y_min, y_max)
+        # plt.vlines(x_max, y_min, y_max)
+        # plt.hlines(y_min, x_min, x_max)
+        # plt.hlines(y_max, x_min, x_max)
         
-        plt.scatter(x, y, marker="o", s=10, c='red')
-        plt.vlines(x_min, y_min, y_max)
-        plt.vlines(x_max, y_min, y_max)
-        plt.hlines(y_min, x_min, x_max)
-        plt.hlines(y_max, x_min, x_max)
-        plt.show()
+        # plt.show()
+        plt.savefig(name, dpi=100, bbox_inches='tight')
+        plt.close(fig)
     
-    # def build_image(self):
-    #
-    #     x = np.array(self.velocities)
-    #     y = np.array(self.distances)
-    #
-    #     points = np.column_stack((x, y))
-    #
-    #     # Define alpha parameter
-    #     alpha = 0.002
-    #
-    #     # Generate the alpha shape
-    #     alpha_shape = alphashape.alphashape(points, alpha)
-    #
-    #     # Initialize plot
-    #     fig, ax = plt.subplots()
-    #
-    #     # Plot input points
-    #     ax.scatter(*zip(*points))
-    #
-    #     # Plot alpha shape
-    #     ax.add_patch(PolygonPatch(alpha_shape, alpha=.2))
-    #
-    #     plt.show()
-    
-    # def build_image(self):
-    #     x_test = np.array(self.velocities)
-    #     y_test = np.array(self.distances)
-    #     z_test = np.array(self.colors)
-    #
-    #     subdiv = 3  # Number of recursive subdivisions of the initial mesh for smooth
-    #     # plots. Values >3 might result in a very high number of triangles
-    #     # for the refine mesh: new triangles numbering = (4**subdiv)*ntri
-    #
-    #     init_mask_frac = 0.0  # Float > 0. adjusting the proportion of
-    #     # (invalid) initial triangles which will be masked
-    #     # out. Enter 0 for no mask.
-    #
-    #     min_circle_ratio = .005  # Minimum circle ratio - border triangles with circle
-    #     # ratio below this will be masked if they touch a
-    #     # border. Suggested value 0.01 ; Use -1 to keep
-    #     # all triangles.
-    #
-    #     random_gen = np.random.mtrand.RandomState(seed=127260)
-    #
-    #     # meshing with Delaunay triangulation
-    #     tri = Triangulation(x_test, y_test)
-    #     ntri = tri.triangles.shape[0]
-    #
-    #
-    #     mask = TriAnalyzer(tri).get_flat_tri_mask(min_circle_ratio)
-    #     tri.set_mask(mask)
-    #
-    #
-    #     # refiner = UniformTriRefiner(tri)
-    #     # tri_refi, z_test_refi = refiner.refine_field(z_test, subdiv=subdiv)
-    #
-    #     # for the demo: loading the 'flat' triangles for plot
-    #     flat_tri = Triangulation(x_test, y_test)
-    #     flat_tri.set_mask(~mask)
-    #
-    #     plt.figure()
-    #
-    #     # # 1) plot of the refined (computed) data countours:
-    #     # plt.tricontour(tri_refi, z_test_refi, levels=levels, cmap=cmap,
-    #     #                linewidths=[2.0, 0.5, 1.0, 0.5])
-    #
-    #     # 3) plot of the fine mesh on which interpolation was done:
-    #     plt.triplot(tri)
-    #     # # 4) plot of the initial 'coarse' mesh:
-    #     # plt.triplot(tri, color='0.7')
-    #
-    #     # plt.tricontourf(tri_refi, z_test_refi, 50, cmap="Greys", vmin=0, vmax=z_test_refi.max())
-    #
-    #     # # 4) plot of the unvalidated triangles from naive Delaunay Triangulation:
-    #     plt.triplot(flat_tri, color='red')
-    #
-    #     plt.show()
-    
-    """
-    def build_image(self):
+    def build_image_points(self):
         x = np.array(self.velocities)
         y = np.array(self.distances)
         z = np.array(self.colors)
-
+        
         layout = pgo.Layout(
-            paper_bgcolor='rgba(0,0,255,0.5)',
-            plot_bgcolor='rgba(0,0,255,0.5)'
+            paper_bgcolor='rgba(0,0,0,1)',
+            plot_bgcolor='rgba(0,0,0,1)'
         )
-
+        
         radio_scatter = pgo.Figure(data=pgo.Scatter(x=x,
-                                               y=y,
-                                               mode='markers',
-                                               marker=dict(
-                                                   size=10,
-                                                   color=z/z.max(),
-                                                   colorscale='gray',
-                                                   showscale=True,
-                                                   reversescale=True
-                                               )
-                                               )
-                                   ,layout=layout
+                                                    y=y,
+                                                    mode='markers',
+                                                    marker=dict(
+                                                        size=10,
+                                                        color=z / z.max(),
+                                                        colorscale='gray',
+                                                        showscale=True,
+                                                        reversescale=True
+                                                    )
+                                                    )
+                                   , layout=layout
                                    )
         z = np.array(self.colors)
         print(f"\n{z.max()}")
-
+        
         radio_scatter.show()
         radio_scatter.write_html('radio_image.html', auto_open=True)
-    """
-    
-    """def build_image(self):
-        x = np.array(self.velocities)
-        y = np.array(self.distances)
-        z = np.array(self.colors)
-
-        triang = tri.Triangulation(x, y)
-
-        def apply_mask(triang, alpha):
-            # Mask triangles with sidelength bigger some alpha
-            triangles = triang.triangles
-            # Mask off unwanted triangles.
-            xtri = x[triangles] - np.roll(x[triangles], 1, axis=1)
-            ytri = y[triangles] - np.roll(y[triangles], 1, axis=1)
-            maxi = np.max(np.sqrt(xtri ** 2 + ytri ** 2), axis=1)
-            
-            triang.set_mask(maxi > alpha)
-
-        # apply_mask(triang, alpha=20)
-
-        xi, yi = np.meshgrid(np.linspace(x.min(), x.max(), 2000), np.linspace(y.min(), y.max(), 200))
-
-        interp_cubic_geom = mtri.CubicTriInterpolator(triang, z, kind='geom')
-        zi_cubic_geom = interp_cubic_geom(xi, yi)
-
-        # interp_cubic_min_E = mtri.CubicTriInterpolator(triang, z, kind='min_E')
-        # zi_cubic_min_E = interp_cubic_min_E(xi, yi)
-
-        fig, ax = plt.subplots()
-        ax.set_facecolor((0, 0, 0))
-        print(f"\n{z.max()}")
-        cs = ax.contourf(xi, yi, zi_cubic_geom, 200, cmap="Greys", extend='min')
-        fig.colorbar(cs, ax=ax)
-        plt.show()
-        
-        #
-        # fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(9, 3))
-        #
-        # ax1.scatter(x, y, s=3, color="white")
-        # ax1.set_facecolor((0, 0, 0))
-        #
-        # ax2.tricontourf(triang, z, 50, cmap="Greys", vmin=0, vmax=z.max())
-        # ax2.set_facecolor((0, 0, 0))
-        #
-        # ax1.set_title("scatter")
-        # ax2.set_title("with mask")
-        #
-        plt.show()"""
-    
-    def add_ray(self, ray: Ray):
-        self.rays.append(ray)
-        self.distances.append(ray.distance_to_point)
-        self.velocities.append(ray.velocity_sign_direction * lg.norm(ray.velocity_projection))
-        self.colors.append(ray.color)

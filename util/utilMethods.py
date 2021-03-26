@@ -5,6 +5,19 @@ import numpy as np
 import plotly.graph_objects as pgo
 
 
+def get_axis_min_max(radio_image_c, radio_image_o):
+    x_c = np.array(radio_image_c.velocities)
+    y_c = np.array(radio_image_c.distances)
+    
+    x_o = np.array(radio_image_o.velocities)
+    y_o = np.array(radio_image_o.distances)
+    
+    x_lim = (min(x_c.min(), x_o.min()), max(x_c.max(), x_o.max()))
+    y_lim = (min(y_c.min(), y_o.min()), max(y_c.max(), y_o.max()))
+
+    # return [min(x_c.min(), x_o.min()), max(x_c.max(), x_o.max()), min(y_c.min(), y_o.min()), max(y_c.max(), y_o.max())]
+    return x_lim, y_lim
+
 def poly_area(x, y):
     return 0.5 * np.abs(np.dot(x, np.roll(y, 1)) - np.dot(y, np.roll(x, 1)))
 

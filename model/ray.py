@@ -15,7 +15,7 @@ class Ray:
         self.cos_of_angle_to_normal = np.cos(np.deg2rad(self.angle_to_normal))
         self.velocity_projection = self.calc_velocity_projection()
         self.velocity_sign_direction = np.dot(self.ray_to_point, self.velocity_projection)
-        self.color = self.angle_to_normal#self.cos_of_angle_to_normal * self.area
+        self.color = self.angle_to_normal #* self.area
 
     
     def calc_angle_to_normal(self):

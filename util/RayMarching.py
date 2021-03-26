@@ -5,7 +5,6 @@ from model.ellipsoid import Ellipsoid
 from model.ray import Ray
 from model.radioImage import RadioImage
 from util import measurer, utilMethods
-import plotly.graph_objects as pgo
 from shapely.geometry.polygon import Polygon
 
 
@@ -51,25 +50,16 @@ def init_ell(x_init, semi_axes, euler_angles, P=None, L=None):
     return Ellipsoid(semi_axes, x_init, mass, euler_angles, P, L, force, torque)
 
 
-def ellipsoid_ray_marching(ell, observation_point, grid_side_point_number,
-                           make_radio_image=False, make_ray_marching_image=False):
-    np.set_printoptions(precision=3, suppress=False)
+def ellipsoid_ray_marching(ell, observation_point, grid_side_point_number):
     
-    fig = pgo.Figure()
-    fig.update_layout(
-        scene=dict(
-            xaxis=dict(showticklabels=False),
-            yaxis=dict(showticklabels=False),
-            zaxis=dict(showticklabels=False),
-        )
-    )
+    np.set_printoptions(precision=3, suppress=False)
     
     eps = 0.0001
     
     grid = generate_ray_grid(ell, observation_point, grid_side_point_number)
     scan_grid = []
     
-    radio_image = RadioImage()
+    radio_image = RadioImage(ell)
     max_dist = np.linalg.norm(ell.x - observation_point) + max([ell.a, ell.b, ell.c])
     # print(max_dist)
     
@@ -101,6 +91,7 @@ def ellipsoid_ray_marching(ell, observation_point, grid_side_point_number,
         
         k += 1
     
+    """
     for k in range(len(scan_grid)):
         n = grid_side_point_number
         i = k // n
@@ -135,8 +126,8 @@ def ellipsoid_ray_marching(ell, observation_point, grid_side_point_number,
             ray = Ray(normal, mid_point_in_element, velocity)
 
             radio_image.add_ray(ray)
-    
     """
+    
     for k in range(len(scan_grid) - grid_side_point_number):
         n = grid_side_point_number
         i = k // n
@@ -168,32 +159,9 @@ def ellipsoid_ray_marching(ell, observation_point, grid_side_point_number,
             ray = Ray(normal, mid_point_in_element, velocity, poligon.area)
             
             radio_image.add_ray(ray)
-    """
-    # -------------------------------------------------------------------------
-    if make_ray_marching_image:
-        
-        for ray in radio_image.rays:
-            fig.add_scatter3d(x=[ray.ray_to_point[0]],
-                              y=[ray.ray_to_point[1]],
-                              z=[ray.ray_to_point[2]],
-                              marker=dict(
-                                  size=2,
-                                  color='rgb(255, 0, 0)'
-                              ))
-            
-            # if ray.normal_in_point is not None:
-            #     fig.add_trace(utilMethods.get_arrow_cone(ray.ray_to_point,
-            #                                              ray.normal_in_point))
-            
-            if ray.velocity_in_point is not None:
-                fig.add_trace(utilMethods.get_arrow_cone(ray.ray_to_point,
-                                                         ray.velocity_projection))
-        
-        fig.show()
-        fig.write_html('ellipsoid_ray_marching.html', auto_open=True)
     
-    if make_radio_image:
-        radio_image.build_image()
+    # -------------------------------------------------------------------------
+    return radio_image
 
 
 def ray_marching_test():
