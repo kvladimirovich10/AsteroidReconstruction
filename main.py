@@ -9,6 +9,7 @@ from util import RayMarching as rm
 import plotly.graph_objects as pgo
 from util import utilMethods
 import os, errno
+import time
 
 
 def init_ell(semi_axes_params):
@@ -88,11 +89,11 @@ def main():
     silent_remove(image_name_c)
     silent_remove(image_name_o)
     
-    seconds = 20
+    seconds = 80
     rate = 50
     time_step = 1 / rate
     observation_point = [0, 0, 0]
-    grid_side_point_number = 60
+    grid_side_point_number = 100
     
     print('\nMOTION MODELING PART : OBSERVED')
     semi_axis_params_o = {'a': 1, 'b': 2, 'c': 1.3}
@@ -107,79 +108,79 @@ def main():
     
     print('\nRAY MARCHING PART : OBSERVED')
     radio_image_o = rm.ellipsoid_ray_marching(ellipsoid_o, observation_point, grid_side_point_number)
+
     # ---------------------------------------------------
     
     eps = 0.001
-    old_delta_a = 0.01
-    old_delta_b = 0.01
-    old_delta_c = 0.01
-    
+    old_delta_a = -0.01
+    old_delta_b = -0.01
+    old_delta_c = -0.01
+
     iteration = 1
     last_best_index = 7
-    while iteration < 100:
-        
+    while iteration < 200:
+
         best_match = [0] * 6
-        
+
         for j in range(6):
-            
+
             silent_remove(image_name_c)
             silent_remove(image_name_o)
-            
+
             delta_a = old_delta_a + eps * sign_generator(j, 1)
             delta_b = old_delta_b + eps * sign_generator(j, 3)
             delta_c = old_delta_c + eps * sign_generator(j, 5)
-            
+
             semi_axis_params_c = {'a': 1 + delta_a, 'b': 2 + delta_b, 'c': 1.3 + delta_c}
             ellipsoid_c = init_ell(semi_axis_params_c)
-            
+
             print(
                 f'\n{iteration} {j} delta_a = {delta_a} delta_b = {delta_b} delta_c = {delta_c} --------------------------')
-            
+
             print('\nMOTION MODELING PART : COMPUTED')
             y_c = ellipsoid_c.body_to_array()
-            
+
             for i in range(seconds * rate):
                 sys.stdout.write(f'\r{i}/{seconds * rate}')
                 sys.stdout.flush()
                 y_c = ellipsoid_c.update_position(y_c, time_step)
-            
+
             # ----------------
-            
+
             print('\nRAY MARCHING PART : COMPUTED')
             radio_image_c = rm.ellipsoid_ray_marching(ellipsoid_c, observation_point, grid_side_point_number)
-            
-            # print('\nIMAGES GENERATION')
+
             x_lim, y_lim = utilMethods.get_axis_min_max(radio_image_c, radio_image_o)
-            
+
             radio_image_o.build_image(image_name_o, x_lim, y_lim)
             radio_image_c.build_image(image_name_c, x_lim, y_lim)
-            
+
             array_c = np.reshape(np.asarray(Image.open(f'{image_name_c}.png').convert('L')).astype(int), (1, -1)) / 255
             array_o = np.reshape(np.asarray(Image.open(f'{image_name_o}.png').convert('L')).astype(int), (1, -1)) / 255
-            
+
             array_res = np.absolute(array_o - array_c)
-            
+
             norm = np.linalg.norm(array_res)
             print(f'\nSHIFT NORM = {norm}')
-            
+
             best_match[j] = norm
-        
+
         best_norm = min(best_match)
         best_index = best_match.index(best_norm)
-        
+
         if ((best_index % 2 == 0 and best_index + 1 == last_best_index) or
                 (best_index % 2 == 1 and best_index - 1 == last_best_index)):
             best_norm = sorted(best_match)[1]
             best_index = best_match.index(best_norm)
-            
+
         print(f'\n{iteration} BEST ACTION NORM = {best_index} {best_norm}')
 
         last_best_index = best_index
-        
+
         old_delta_a += eps * sign_generator(best_index, 1)
         old_delta_b += eps * sign_generator(best_index, 3)
         old_delta_c += eps * sign_generator(best_index, 5)
-        
+
         iteration += 1
     
     # rate = 25
