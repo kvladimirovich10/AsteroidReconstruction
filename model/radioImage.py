@@ -47,6 +47,15 @@ class RadioImage:
         z = np.array(self.colors)
         z = z / z.max()
         
+        x_min = x.min()
+        x_max = x.max()
+        x_min_index = np.argmin(x)
+        x_max_index = np.argmax(x)
+        y_x_min = y[x_min_index]
+        y_x_max = y[x_max_index]
+        k = (y_x_max - y_x_min) / (x_max - x_min)
+        b = y_x_min - k * x_min
+        
         points = np.column_stack((x, y))
         triangulation = trim.Triangulation(x, y)
         
@@ -54,13 +63,14 @@ class RadioImage:
         edge_points = []
         
         alpha_nose = 10
+        alpha_tail = 1
         alpha_side = 0.0000001
         
         delta_y = y.max() - y.min()
-        x_min = -0.5
-        x_max = 0.35
-        y_min = y.min()
-        y_max = y.min() + delta_y / 5
+        x_min_nose = -0.5
+        x_max_nose = 0.35
+        y_min_nose = y.min()
+        y_max_nose = y.min() + delta_y / 3#5
         
         def add_edge(i, j):
             if (i, j) in edges or (j, i) in edges:
@@ -68,10 +78,15 @@ class RadioImage:
             edges.add((i, j))
             edge_points.append(points[[i, j]])
         
-        def get_plot_part(a, b, c):
-            for p in [a, b, c]:
-                if x_min < p[0] < x_max and y_min < p[1] < y_max:
+        def is_above_line(x, y):
+            return y > k * x + b
+        
+        def get_plot_part(a_p, b_p, c_p):
+            for p in [a_p, b_p, c_p]:
+                if x_min_nose < p[0] < x_max_nose and y_min_nose < p[1] < y_max_nose:
                     return alpha_nose
+                elif is_above_line(p[0], p[1]):
+                    return alpha_tail
             
             return alpha_side
         
@@ -150,14 +165,14 @@ class RadioImage:
         inside_alpha = np.array(inside_alpha).T
         
         valid_triangulation = trim.Triangulation(x, y, valid_tri)
-
+        
         fig, ax = plt.subplots()
         ax.set(xlim=x_lim, ylim=y_lim)
         ax.ticklabel_format(useOffset=False)
         plt.axis('off')
         plt.gca().set_aspect('equal')
         fig.patch.set_facecolor('black')
-
+        
         # plt.gca().add_patch(PolygonPatch(cascaded_union(triangles), alpha=0.5))
         # plt.scatter(x_alpha, y_alpha, marker="*", s=20)
         
@@ -172,14 +187,15 @@ class RadioImage:
         color_map = plt.cm.get_cmap('Greys')
         plt.tricontourf(valid_triangulation, z, 400, cmap=color_map, vmin=0, vmax=z.max())
         # plt.scatter(0, np.linalg.norm(self.ell.x), marker="o", s=10, c='red')
-
-        # plt.scatter(x, y, marker="o", s=10, c='red')
-        # plt.vlines(x_min, y_min, y_max)
-        # plt.vlines(x_max, y_min, y_max)
-        # plt.hlines(y_min, x_min, x_max)
-        # plt.hlines(y_max, x_min, x_max)
         
-        # plt.show()
+        # plt.scatter(x, y, marker="o", s=10, c='red')
+        # plt.plot([x_min, x_max], [y_x_min - delta_y / 6, y_x_max - delta_y / 6], 'b-o')
+        # plt.vlines(x_min_nose, y_min_nose, y_max_nose)
+        # plt.vlines(x_max_nose, y_min_nose, y_max_nose)
+        # plt.hlines(y_min_nose, x_min_nose, x_max_nose)
+        # plt.hlines(y_max_nose, x_min_nose, x_max_nose)
+
+        plt.show()
         plt.savefig(name, dpi=100, bbox_inches='tight')
         plt.close(fig)
     

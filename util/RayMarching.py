@@ -72,6 +72,7 @@ def init_ell(x_init, semi_axes, euler_angles, P=None, L=None):
     
     return Ellipsoid(semi_axes, x_init, mass, euler_angles, P, L, force, torque)
 
+
 def filter_out_of_circle(grid, k):
     n = grid.grid_side_point_number
     i = k // n
@@ -83,6 +84,7 @@ def filter_out_of_circle(grid, k):
         return True
     
     return False
+
 
 def ellipsoid_ray_marching(ell, observation_point, grid_side_point_number):
     np.set_printoptions(precision=3, suppress=False)
@@ -105,12 +107,12 @@ def ellipsoid_ray_marching(ell, observation_point, grid_side_point_number):
         if k % 100 == 0:
             sys.stdout.write(f'\r{k}/{len(grid.points)}')
             sys.stdout.flush()
-            
+        
         if filter_out_of_circle(grid, k):
             scan_grid.append(init_point)
             k += 1
             continue
-            
+        
         dist = np.linalg.norm(ell.x)
         point = observation_point
         closest_point = [0, 0, 0]
@@ -129,76 +131,23 @@ def ellipsoid_ray_marching(ell, observation_point, grid_side_point_number):
         
         k += 1
     
-    """
     for k in range(len(scan_grid)):
-        n = grid_side_point_number
-        i = k // n
-        j = k % n
-
-        a = i * n + j
-        b = i * n + j + 1
-        c = (i + 1) * n + j
-        d = (i + 1) * n + j + 1
-        comparison = (scan_grid[a] != grid[a]).any()
-
-        if comparison:
-            _, nonrotated_point_projection = measurer.get_closest_dist_rotated(ell, scan_grid[a])
-
-            normal = ell.get_normal_vector_in_point(nonrotated_point_projection)
-            velocity = ell.get_full_velocity_in_point(scan_grid[a])
-            ray = Ray(normal, scan_grid[a], velocity)
-
-            radio_image.add_ray(ray)
-
-        comparison = (scan_grid[a] != grid[a]).any() \
-                     and (scan_grid[b] != grid[b]).any() \
-                     and (scan_grid[c] != grid[c]).any() \
-                     and (scan_grid[d] != grid[d]).any()
-        if comparison:
-            mid_point_in_element = utilMethods.centroid([scan_grid[a], scan_grid[b], scan_grid[c], scan_grid[d]])
-
-            _, nonrotated_point_projection = measurer.get_closest_dist_rotated(ell, mid_point_in_element)
-
-            normal = ell.get_normal_vector_in_point(nonrotated_point_projection)
-            velocity = ell.get_full_velocity_in_point(mid_point_in_element)
-            ray = Ray(normal, mid_point_in_element, velocity)
-
-            radio_image.add_ray(ray)
-    """
-    
-    for k in range(len(scan_grid) - grid_side_point_number):
-        n = grid_side_point_number
-        i = k // n
-        j = k % n
         
-        a = i * n + j
-        b = i * n + j + 1
-        c = (i + 1) * n + j
-        d = (i + 1) * n + j + 1
+        comparison = (scan_grid[k] != grid.points[k]).any()
         
-        comparison = (scan_grid[a] != grid.points[a]).any() \
-                     and (scan_grid[b] != grid.points[b]).any() \
-                     and (scan_grid[c] != grid.points[c]).any() \
-                     and (scan_grid[d] != grid.points[d]).any()
         if comparison:
-            element = [scan_grid[a], scan_grid[b], scan_grid[c], scan_grid[d]]
-            _x_list = [v[0] for v in element]
-            _y_list = [v[1] for v in element]
-            _z_list = [v[2] for v in element]
-            
-            poligon = Polygon(list(zip(_x_list, _y_list, _z_list)))
-            
-            mid_point_in_element = utilMethods.centroid(element)
+            mid_point_in_element = scan_grid[k]
             
             _, nonrotated_point_projection = measurer.get_closest_dist_rotated(ell, mid_point_in_element)
             
             normal = ell.get_normal_vector_in_point(nonrotated_point_projection)
             velocity = ell.get_full_velocity_in_point(mid_point_in_element)
-            ray = Ray(normal, mid_point_in_element, velocity, poligon.area)
+            ray = Ray(normal, mid_point_in_element, velocity, 1)
             
             radio_image.add_ray(ray)
     
-    # -------------------------------------------------------------------------
+    # plot_ray_marching(radio_image)
+    
     return radio_image
 
 
@@ -211,6 +160,9 @@ def plot_ray_marching(radio_image):
             zaxis=dict(showticklabels=False),
         )
     )
+
+    fig.update_layout(showlegend=False)
+    
     
     for ray in radio_image.rays:
         fig.add_scatter3d(x=[ray.ray_to_point[0]],
@@ -229,6 +181,13 @@ def plot_ray_marching(radio_image):
             fig.add_trace(utilMethods.get_arrow_cone(ray.ray_to_point,
                                                      ray.velocity_projection))
     
+    fig.add_scatter3d(x=[0, 0],
+                      y=[0, 0],
+                      z=[0, 0.1],
+                      marker=dict(
+                          size=2,
+                          color='rgb(0, 0, 255)'
+                      ))
     fig.show()
     fig.write_html('ellipsoid_ray_marching.html', auto_open=True)
 
@@ -250,3 +209,37 @@ def ray_marching_test():
 
 if __name__ == '__main__':
     ray_marching_test()
+
+"""
+for k in range(len(scan_grid) - grid_side_point_number):
+        n = grid_side_point_number
+        i = k // n
+        j = k % n
+
+        a = i * n + j
+        b = i * n + j + 1
+        c = (i + 1) * n + j
+        d = (i + 1) * n + j + 1
+
+        comparison = (scan_grid[a] != grid.points[a]).any() \
+                     and (scan_grid[b] != grid.points[b]).any() \
+                     and (scan_grid[c] != grid.points[c]).any() \
+                     and (scan_grid[d] != grid.points[d]).any()
+        if comparison:
+            element = [scan_grid[a], scan_grid[b], scan_grid[c], scan_grid[d]]
+            _x_list = [v[0] for v in element]
+            _y_list = [v[1] for v in element]
+            _z_list = [v[2] for v in element]
+
+            poligon = Polygon(list(zip(_x_list, _y_list, _z_list)))
+
+            mid_point_in_element = utilMethods.centroid(element)
+
+            _, nonrotated_point_projection = measurer.get_closest_dist_rotated(ell, mid_point_in_element)
+
+            normal = ell.get_normal_vector_in_point(nonrotated_point_projection)
+            velocity = ell.get_full_velocity_in_point(mid_point_in_element)
+            ray = Ray(normal, mid_point_in_element, velocity, poligon.area)
+
+            radio_image.add_ray(ray)
+"""

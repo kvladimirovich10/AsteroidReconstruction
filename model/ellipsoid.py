@@ -78,7 +78,7 @@ class Ellipsoid:
         utils.solver(self, y, time_step)
         return self.body_to_array()
     
-    def get_dy_dt_array(self, y):
+    def dy_dt_to_array(self, y):
         self.array_to_body(y)
         
         omega_as_quat = Quaternion(scalar=0, vector=self.omega)

@@ -67,10 +67,10 @@ def quaternion_to_matrix(q):
 
 
 def solver(el, y, time_step):
-    k1 = el.get_dy_dt_array(y)
-    k2 = el.get_dy_dt_array(y + time_step * k1 / 2)
-    k3 = el.get_dy_dt_array(y + time_step * k2 / 2)
-    k4 = el.get_dy_dt_array(y + time_step * k3)
+    k1 = el.dy_dt_to_array(y)
+    k2 = el.dy_dt_to_array(y + time_step * k1 / 2)
+    k3 = el.dy_dt_to_array(y + time_step * k2 / 2)
+    k4 = el.dy_dt_to_array(y + time_step * k3)
     
     return y + time_step * (k1 + 2 * k2 + 2 * k3 + k4) / 6
 
