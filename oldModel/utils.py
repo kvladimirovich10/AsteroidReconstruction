@@ -23,12 +23,12 @@ def matrix_to_array(matrix):
 
 
 def generate_quaternion_by_angels(alpha, beta, gamma):
-    r_matrix = R.from_euler('xyz', [alpha, beta, gamma], degrees=True)
+    r_matrix = R.from_euler('XYZ', [alpha, beta, gamma], degrees=True)
     return r_matrix.as_quat()
 
 
 def rot_matrix_by_angles(alpha, beta, gamma):
-    r_matrix = R.from_euler('xyz', [alpha, beta, gamma], degrees=True)
+    r_matrix = R.from_euler('XYZ', [alpha, beta, gamma], degrees=True)
     return r_matrix.as_matrix()
 
 

@@ -3,7 +3,10 @@ from vpython import *
 import math as m
 import numpy as np
 import plotly.graph_objects as pgo
-
+from scipy.spatial.transform import Rotation as R
+from itertools import chain
+import model.ellipsoid as Ellipsoid
+import math
 
 def get_axis_min_max(radio_image_c, radio_image_o):
     x_c = np.array(radio_image_c.velocities)
@@ -14,9 +17,10 @@ def get_axis_min_max(radio_image_c, radio_image_o):
     
     x_lim = (min(x_c.min(), x_o.min()), max(x_c.max(), x_o.max()))
     y_lim = (min(y_c.min(), y_o.min()), max(y_c.max(), y_o.max()))
-
+    
     # return [min(x_c.min(), x_o.min()), max(x_c.max(), x_o.max()), min(y_c.min(), y_o.min()), max(y_c.max(), y_o.max())]
     return x_lim, y_lim
+
 
 def poly_area(x, y):
     return 0.5 * np.abs(np.dot(x, np.roll(y, 1)) - np.dot(y, np.roll(x, 1)))
@@ -58,8 +62,13 @@ def generate_inertia_body_matrix(a, b, c, mass):
 
 
 def generate_quaternion_by_angels(alpha, beta, gamma):
-    r_matrix = R.from_euler('xyz', [alpha, beta, gamma], degrees=True)
+    r_matrix = R.from_euler('XYZ', [alpha, beta, gamma], degrees=True)
     return r_matrix.as_quat()
+
+
+def rot_matrix_by_angles(alpha, beta, gamma):
+    r_matrix = R.from_euler('XYZ', [alpha, beta, gamma], degrees=True)
+    return r_matrix.as_matrix()
 
 
 def quaternion_to_matrix(q):
@@ -72,11 +81,22 @@ def solver(el, y, time_step):
     k3 = el.dy_dt_to_array(y + time_step * k2 / 2)
     k4 = el.dy_dt_to_array(y + time_step * k3)
     
-    return y + time_step * (k1 + 2 * k2 + 2 * k3 + k4) / 6
+    y_new = y + time_step * (k1 + 2 * k2 + 2 * k3 + k4) / 6
+    return y_new
+
+
+def star_omega(omega):
+    return np.array([[0, -omega[2], omega[1]],
+                     [omega[2], 0, -omega[0]],
+                     [-omega[1], omega[0], 0]])
 
 
 def vector_from_array(array):
     return vector(array[0], array[1], array[2])
+
+
+def matrix_to_array(matrix):
+    return list(chain.from_iterable(matrix))
 
 
 def array_from_vector(vector):
@@ -88,12 +108,16 @@ def rotate(body, ell):
     body.rotate(angle=ell.omega[1], axis=vector(0, 1, 0))
     body.rotate(angle=ell.omega[2], axis=vector(0, 0, 1))
 
+def initial_rotation(body, ell: Ellipsoid):
+    body.rotate(angle=math.radians(ell.euler_angles.get('alpha')), axis=vector(1, 0, 0))
+    body.rotate(angle=math.radians(ell.euler_angles.get('beta')), axis=vector(0, 1, 0))
+    body.rotate(angle=math.radians(ell.euler_angles.get('gamma')), axis=vector(0, 0, 1))
 
 def translate(body, ell):
     body.pos = body.pos + vector(ell.v[0], ell.v[1], ell.v[2])
 
 
-def R_from_2vec(vector_orig, vector_fin):
+def R_from_2vec(vector_fin, vector_orig=(0, 0, 1)):
     R = np.zeros((3, 3))
     
     vector_orig = vector_orig / np.linalg.norm(vector_orig)

@@ -3,24 +3,23 @@ import sys
 import numpy as np
 from PIL import Image
 
-from model.ellipsoid import Ellipsoid
 import math
 from util import RayMarching as rm
 import plotly.graph_objects as pgo
 from util import utilMethods
 import os, errno
 import time
+from model.ellipsoid import Ellipsoid
 
 
 def init_ell(semi_axes_params):
-    mass = 1000
+    mass = 100
     x = np.array([10000, 0, 0])
     semi_axes = semi_axes_params
     euler_angles = {'alpha': 0, 'beta': 0, 'gamma': 0}
     
     P = np.array([0, 0, 0])
     L = np.array([-5, 3, 10])
-    # L = np.array([0, 0, 0])
     
     force = np.array([0, 0, 0])
     torque = np.array([0, 0, 0])
@@ -89,11 +88,10 @@ def main_process(a, b, c):
     silent_remove(image_name_c)
     silent_remove(image_name_o)
     
-    seconds = 80
+    seconds = 60
     rate = 50
     time_step = 1 / rate
-    observation_point = [0, 0, 0]
-    grid_side_point_number = 80
+    grid_side_point_number = 100
     
     print('\nMOTION MODELING PART : OBSERVED')
     semi_axis_params_o = {'a': a, 'b': b, 'c': c}
@@ -107,13 +105,13 @@ def main_process(a, b, c):
         y_o = ellipsoid_o.update_position(y_o, time_step)
     
     print('\nRAY MARCHING PART : OBSERVED')
-    radio_image_o = rm.ellipsoid_ray_marching(ellipsoid_o, observation_point, grid_side_point_number)
+    radio_image_o = rm.ellipsoid_ray_marching(ellipsoid_o, grid_side_point_number)
 
-    # x_lim, y_lim = utilMethods.get_axis_min_max(radio_image_o, radio_image_o)
-    #
-    # radio_image_o.build_image(image_name_o, x_lim, y_lim)
-    #
-    # return
+    x_lim, y_lim = utilMethods.get_axis_min_max(radio_image_o, radio_image_o)
+
+    radio_image_o.build_image(image_name_o, x_lim, y_lim)
+
+    return
     # ---------------------------------------------------
     
     eps = 0.1
@@ -153,7 +151,7 @@ def main_process(a, b, c):
                 y_c = ellipsoid_c.update_position(y_c, time_step)
             
             print('\nRAY MARCHING PART : COMPUTED')
-            radio_image_c = rm.ellipsoid_ray_marching(ellipsoid_c, observation_point, grid_side_point_number)
+            radio_image_c = rm.ellipsoid_ray_marching(ellipsoid_c, grid_side_point_number)
             
             x_lim, y_lim = utilMethods.get_axis_min_max(radio_image_c, radio_image_o)
             

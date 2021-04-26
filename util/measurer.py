@@ -3,21 +3,7 @@ import numpy as np
 import model.ellipsoid as ell
 import math as m
 import numpy.linalg as lg
-
-
-def _init_ell(init_x):
-    mass = 100
-    x = np.array(init_x)
-    semi_axes = {'a': 1, 'b': 3, 'c': 2}
-    euler_angles = {'alpha': 0, 'beta': 0, 'gamma': 0}
-    
-    P = np.array([1, 1, 1])
-    L = np.array([2.5, -3, 1])
-    
-    force = np.array([0, 0, 0])
-    torque = np.array([0, 0, 0])
-    
-    return ell.Ellipsoid(semi_axes, x, mass, euler_angles, P, L, force, torque)
+from model.ellipsoid import Ellipsoid
 
 
 def _get_xyz_from_polar_rotated(ell, phi, theta):
@@ -87,54 +73,6 @@ def _get_f_w_rotated(point, ell, phi, theta):
     
     a21 = -1 * np.dot(x_rotated_d_phi, x_rotated_d_theta) + np.dot(point - x_rotated, x_rotated_d2_phi_theta)
     a22 = -1 * np.dot(x_rotated_d_theta, x_rotated_d_theta) + np.dot(point - x_rotated, x_rotated_d2_theta)
-    
-    w = np.array([[a11, a12], [a21, a22]])
-    
-    return f, w
-
-
-def _get_f_w(point, ell, phi, theta):
-    a, b, c = ell.a, ell.b, ell.c
-    
-    x = np.array([a * m.cos(phi) * m.cos(theta),
-                         b * m.cos(phi) * m.sin(theta),
-                         c * m.sin(phi)])
-    
-    x_d_theta = np.array([-a * m.cos(phi) * m.sin(theta),
-                                 b * m.cos(phi) * m.cos(theta),
-                                 0])
-    
-    x_d_phi = np.array([-a * m.sin(phi) * m.cos(theta),
-                               -b * m.sin(phi) * m.sin(theta),
-                               c * m.cos(phi)])
-    
-    x_d2_theta = np.array([-a * m.cos(phi) * m.cos(theta),
-                                  -b * m.cos(phi) * m.sin(theta),
-                                  0])
-    
-    x_d2_phi = np.array([-a * m.cos(phi) * m.cos(theta),
-                                -b * m.cos(phi) * m.sin(theta),
-                                -c * m.sin(phi)])
-    
-    x_d2_phi_theta = np.array([a * m.sin(phi) * m.sin(theta),
-                                      -b * m.sin(phi) * m.cos(theta),
-                                      0])
-    
-    # ============================================
-    
-    f_phi = np.dot(point - x, x_d_phi)
-    
-    f_theta = np.dot(point - x, x_d_theta)
-    
-    f = np.array([f_phi, f_theta])
-    
-    # ============================================
-    
-    a11 = -1 * np.dot(x_d_phi, x_d_phi) + np.dot(point - x, x_d2_phi)
-    a12 = -1 * np.dot(x_d_theta, x_d_phi) + np.dot(point - x, x_d2_phi_theta)
-    
-    a21 = -1 * np.dot(x_d_phi, x_d_theta) + np.dot(point - x, x_d2_phi_theta)
-    a22 = -1 * np.dot(x_d_theta, x_d_theta) + np.dot(point - x, x_d2_theta)
     
     w = np.array([[a11, a12], [a21, a22]])
     
@@ -219,6 +157,54 @@ def _get_xyz_from_polar(ell, phi, theta):
                      ell.c * m.sin(phi)])
 
 
+def _get_f_w(point, ell, phi, theta):
+    a, b, c = ell.a, ell.b, ell.c
+    
+    x = np.array([a * m.cos(phi) * m.cos(theta),
+                  b * m.cos(phi) * m.sin(theta),
+                  c * m.sin(phi)])
+    
+    x_d_theta = np.array([-a * m.cos(phi) * m.sin(theta),
+                          b * m.cos(phi) * m.cos(theta),
+                          0])
+    
+    x_d_phi = np.array([-a * m.sin(phi) * m.cos(theta),
+                        -b * m.sin(phi) * m.sin(theta),
+                        c * m.cos(phi)])
+    
+    x_d2_theta = np.array([-a * m.cos(phi) * m.cos(theta),
+                           -b * m.cos(phi) * m.sin(theta),
+                           0])
+    
+    x_d2_phi = np.array([-a * m.cos(phi) * m.cos(theta),
+                         -b * m.cos(phi) * m.sin(theta),
+                         -c * m.sin(phi)])
+    
+    x_d2_phi_theta = np.array([a * m.sin(phi) * m.sin(theta),
+                               -b * m.sin(phi) * m.cos(theta),
+                               0])
+    
+    # ============================================
+    
+    f_phi = np.dot(point - x, x_d_phi)
+    
+    f_theta = np.dot(point - x, x_d_theta)
+    
+    f = np.array([f_phi, f_theta])
+    
+    # ============================================
+    
+    a11 = -1 * np.dot(x_d_phi, x_d_phi) + np.dot(point - x, x_d2_phi)
+    a12 = -1 * np.dot(x_d_theta, x_d_phi) + np.dot(point - x, x_d2_phi_theta)
+    
+    a21 = -1 * np.dot(x_d_phi, x_d_theta) + np.dot(point - x, x_d2_phi_theta)
+    a22 = -1 * np.dot(x_d_theta, x_d_theta) + np.dot(point - x, x_d2_theta)
+    
+    w = np.array([[a11, a12], [a21, a22]])
+    
+    return f, w
+
+
 def _get_initial_solution(point, ell):
     a, b, c = ell.a, ell.b, ell.c
     x, y, z = point[0], point[1], point[2]
@@ -233,8 +219,8 @@ def metrics(ell, x_old, x_new):
     return lg.norm(_get_xyz_from_polar(ell, *x_old) - _get_xyz_from_polar(ell, *x_new))
 
 
-def get_closest_dist_rotated(ell, point, eps=0.0001):
-    R_inv = np.linalg.inv(ell.rotation_matrix)
+def get_closest_dist_rotated(ell: Ellipsoid, point, eps=0.001):
+    R_inv = np.linalg.inv(ell.rot_matrix)
     point_in_ell_system = np.dot(R_inv, point - ell.x)
     k = 0
     np.set_printoptions(precision=3, suppress=False)

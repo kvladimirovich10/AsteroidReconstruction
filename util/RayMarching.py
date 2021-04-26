@@ -8,6 +8,7 @@ from model.radioImage import RadioImage
 from util import measurer, utilMethods
 from shapely.geometry.polygon import Polygon
 import plotly.graph_objects as pgo
+from model.ellipsoid import Ellipsoid
 
 
 def plot_grid(grid):
@@ -25,30 +26,29 @@ def plot_grid(grid):
     radio_scatter.show()
 
 
-def generate_ray_grid(ell, observation_point, grid_side_point_number):
-    vector = ell.x - observation_point
-    normalized_vector = vector / np.linalg.norm(vector)
+def generate_ray_grid(ell, grid_side_point_number):
     
-    semi_side, step, initial_grid = generate_initial_grid(grid_side_point_number, max([ell.a, ell.b, ell.c]),
-                                                          np.linalg.norm(vector))
+    semi_side, step, initial_grid = generate_initial_grid(ell, grid_side_point_number)
     
-    initial_grid_normal = (0, 0, 1)
+    center_unit_vector = ell.x / np.linalg.norm(ell.x)
     
-    R = utilMethods.R_from_2vec(initial_grid_normal, normalized_vector)
-    untranslated_grid = np.matmul(R, initial_grid)
+    grid_rotation_mat = utilMethods.R_from_2vec(center_unit_vector)
+    untranslated_grid = np.matmul(grid_rotation_mat, initial_grid)
     
     translation_coef = (np.linalg.norm(ell.x) + max([ell.a, ell.b, ell.c])) / np.linalg.norm(ell.x)
     
-    final_grid = np.transpose(untranslated_grid) + translation_coef * ell.x - observation_point
+    final_grid = np.transpose(untranslated_grid) + translation_coef * ell.x
     
     return Grid(semi_side, step, grid_side_point_number, final_grid)
 
 
-def generate_initial_grid(n, max_semi_axis, x_center_distance):
+def generate_initial_grid(ell, n):
+    x_center_distance = np.linalg.norm(ell.x)
+    max_semi_axis = max([ell.a, ell.b, ell.c])
     grid = np.zeros((n * n, 3))
     
-    semi_side = max_semi_axis * (x_center_distance + max_semi_axis) / np.sqrt(
-        x_center_distance ** 2 - max_semi_axis ** 2)
+    semi_side = max_semi_axis * (x_center_distance + max_semi_axis) / x_center_distance
+                # np.sqrt(x_center_distance ** 2 - max_semi_axis ** 2)
     
     step = 2 * semi_side / (n - 1)
     
@@ -86,69 +86,59 @@ def filter_out_of_circle(grid, k):
     return False
 
 
-def ellipsoid_ray_marching(ell, observation_point, grid_side_point_number):
-    np.set_printoptions(precision=3, suppress=False)
-    
-    eps = 0.0001
-    
-    grid = generate_ray_grid(ell, observation_point, grid_side_point_number)
-    scan_grid = []
+def ellipsoid_ray_marching(ell, grid_side_point_number):
+    grid = generate_ray_grid(ell, grid_side_point_number)
     
     radio_image = RadioImage(ell)
-    max_dist = np.linalg.norm(ell.x - observation_point) + max([ell.a, ell.b, ell.c])
-    # print(max_dist)
     
+    max_dist = np.linalg.norm(ell.x) + max([ell.a, ell.b, ell.c])
     k = 0
     
     for grid_point in grid.points:
-        
-        init_point = grid_point  # + observation_point
         
         if k % 100 == 0:
             sys.stdout.write(f'\r{k}/{len(grid.points)}')
             sys.stdout.flush()
         
         if filter_out_of_circle(grid, k):
-            scan_grid.append(init_point)
             k += 1
             continue
+
+        eps = 0.0001
         
-        dist = np.linalg.norm(ell.x)
-        point = observation_point
-        closest_point = [0, 0, 0]
+        dist, closest_point = ray_marching(ell, grid_point, max_dist, eps)
         
-        marching_vector = grid_point - observation_point
-        normalized_marching_vector = marching_vector / np.linalg.norm(marching_vector)
-        while eps < dist < max_dist:
-            dist, _ = measurer.get_closest_dist_rotated(ell, point)
-            closest_point = point + 0.8 * dist * normalized_marching_vector
-            point = closest_point
-        
-        if dist < max_dist:
-            scan_grid.append(closest_point)
-        else:
-            scan_grid.append(init_point)
-        
-        k += 1
-    
-    for k in range(len(scan_grid)):
-        
-        comparison = (scan_grid[k] != grid.points[k]).any()
-        
-        if comparison:
-            mid_point_in_element = scan_grid[k]
+        if dist < eps:
+            _, not_rotated_point_projection = measurer.get_closest_dist_rotated(ell, closest_point)
             
-            _, nonrotated_point_projection = measurer.get_closest_dist_rotated(ell, mid_point_in_element)
-            
-            normal = ell.get_normal_vector_in_point(nonrotated_point_projection)
-            velocity = ell.get_full_velocity_in_point(mid_point_in_element)
-            ray = Ray(normal, mid_point_in_element, velocity, 1)
+            normal = ell.get_normal_vector_in_point(not_rotated_point_projection)
+            velocity = ell.get_full_velocity_in_point(closest_point)
+            ray = Ray(normal_in_point=normal, ray_to_point=closest_point, velocity_in_point=velocity)
             
             radio_image.add_ray(ray)
+        
+        k += 1
     
     # plot_ray_marching(radio_image)
     
     return radio_image
+
+
+def ray_marching(ell, grid_point, max_dist, eps):
+    
+    dist = np.linalg.norm(ell.x)
+    point = [0, 0, 0]
+    closest_point = [0, 0, 0]
+    
+    marching_vector = grid_point
+    normalized_marching_vector = marching_vector / np.linalg.norm(marching_vector)
+    
+    while eps < dist and np.linalg.norm(point) < max_dist:
+        dist, _ = measurer.get_closest_dist_rotated(ell, point)
+        closest_point = point + 0.8 * dist * normalized_marching_vector
+        point = closest_point
+    
+    return dist, closest_point
 
 
 def plot_ray_marching(radio_image):
@@ -160,9 +150,8 @@ def plot_ray_marching(radio_image):
             zaxis=dict(showticklabels=False),
         )
     )
-
-    fig.update_layout(showlegend=False)
     
+    fig.update_layout(showlegend=False)
     
     for ray in radio_image.rays:
         fig.add_scatter3d(x=[ray.ray_to_point[0]],
@@ -191,24 +180,6 @@ def plot_ray_marching(radio_image):
     fig.show()
     fig.write_html('ellipsoid_ray_marching.html', auto_open=True)
 
-
-def ray_marching_test():
-    x_init = np.array([-176, 100, 230])
-    semi_axes = {'a': 2.3, 'b': 2.5, 'c': 1.8}
-    euler_angles = {'alpha': 13, 'beta': 45, 'gamma': 76}
-    
-    ellipsoid = init_ell(x_init, semi_axes, euler_angles)
-    ellipsoid.v = [0, 0, 0]
-    ellipsoid.omega = [10, 24, -5]
-    
-    observation_point = [0, 0, 0]
-    grid_side_point_number = 15
-    
-    ellipsoid_ray_marching(ellipsoid, observation_point, grid_side_point_number, make_ray_marching_image=True)
-
-
-if __name__ == '__main__':
-    ray_marching_test()
 
 """
 for k in range(len(scan_grid) - grid_side_point_number):

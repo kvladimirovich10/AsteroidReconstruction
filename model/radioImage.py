@@ -37,9 +37,9 @@ class RadioImage:
         self.colors.append(ray.color)
     
     def build_image(self, name, x_lim, y_lim):
-        self.build_image_interp(name, x_lim, y_lim)
+        # self.build_image_interp(name, x_lim, y_lim)
         
-        # self.build_image_points()
+        self.build_image_points()
     
     def build_image_interp(self, name, x_lim, y_lim):
         x = np.array(self.velocities)
@@ -205,15 +205,15 @@ class RadioImage:
         z = np.array(self.colors)
         
         layout = pgo.Layout(
-            paper_bgcolor='rgba(0,0,0,1)',
-            plot_bgcolor='rgba(0,0,0,1)'
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)'
         )
         
         radio_scatter = pgo.Figure(data=pgo.Scatter(x=x,
                                                     y=y,
                                                     mode='markers',
                                                     marker=dict(
-                                                        size=10,
+                                                        size=5,
                                                         color=z / z.max(),
                                                         colorscale='gray',
                                                         showscale=True,
